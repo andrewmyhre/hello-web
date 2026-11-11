@@ -1,6 +1,7 @@
 # Sealed 2026-11-11 with kubeseal (controller kube-system/sealed-secrets-controller)
 # from the Google OAuth Web client JSON; holds client-id and client-secret.
-# Unseal verified once applied: see deploy/dev/README.md step 2.
+# The controller unsealed it into Secret hello-web-dev/hello-web-google-oauth
+# on apply (verified the same day).
 ---
 apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret
