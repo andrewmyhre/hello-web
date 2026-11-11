@@ -1,0 +1,28 @@
+# hello-web-dev.immutablesoftware.dev: the API's paths go to the API and
+# everything else to the UI, on one origin so the session cookie (HttpOnly,
+# SameSite=Lax, Path /) reaches the API from the UI. TLS ends at Cloudflare's
+# edge (there is no cert-manager here), so there is deliberately no tls:
+# block; the Cloudflare tunnel on the host sends every hostname to
+# ingress-nginx on 127.0.0.1:30080 and this rule matches on the Host header.
+#
+# Prefix matches whole path segments, so /me also covers /me/... but not
+# /meetings. A new API route needs a path here, and the same prefix in the
+# UI service worker's bypass list (EXTRA_API_PREFIXES in ui/src/service-worker.ts). deploy-dev
+# applies this file on every push to main.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello-web
+  namespace: hello-web-dev
+  labels: { app.kubernetes.io/part-of: hello-web }
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: hello-web-dev.immutablesoftware.dev
+      http:
+        paths:
+          - { path: /auth, pathType: Prefix, backend: { service: { name: hello-web-api, port: { name: http } } } }
+          - { path: /me, pathType: Prefix, backend: { service: { name: hello-web-api, port: { name: http } } } }
+          - { path: /health, pathType: Exact, backend: { service: { name: hello-web-api, port: { name: http } } } }
+          - { path: /openapi.json, pathType: Exact, backend: { service: { name: hello-web-api, port: { name: http } } } }
+          - { path: /, pathType: Prefix, backend: { service: { name: hello-web-ui, port: { name: http } } } }

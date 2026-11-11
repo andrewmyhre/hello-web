@@ -1,0 +1,131 @@
+package hello_web
+
+import (
+	"bufio"
+	"os"
+	"reflect"
+	"sort"
+	"strings"
+	"testing"
+
+	"github.com/andrewmyhre/go-web-base/core/db"
+	"github.com/andrewmyhre/go-web-base/core/server"
+)
+
+// docRole is one role as docs/roles.md writes it.
+type docRole struct {
+	inherits []string
+	perms    []string
+}
+
+// parseRolesDoc reads docs/roles.md: each "## Name (scope)" heading, its
+// "Everything a X and a Y has" line, and its "- Resource: Verb" bullets.
+func parseRolesDoc(t *testing.T) map[string]*docRole {
+	t.Helper()
+	f, err := os.Open("docs/roles.md")
+	if err != nil {
+		t.Fatalf("open docs/roles.md: %v", err)
+	}
+	defer func() { _ = f.Close() }()
+	out := map[string]*docRole{}
+	var cur *docRole
+	in := false
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		switch {
+		case line == "# Roles":
+			in = true
+			continue
+		case strings.HasPrefix(line, "# "):
+			in = false
+		}
+		if !in {
+			continue
+		}
+		if name, ok := strings.CutPrefix(line, "## "); ok {
+			if i := strings.Index(name, " ("); i >= 0 {
+				name = name[:i]
+			}
+			cur = &docRole{}
+			out[name] = cur
+			continue
+		}
+		if cur == nil {
+			continue
+		}
+		if rest, ok := strings.CutPrefix(line, "Everything a "); ok {
+			if i := strings.Index(rest, " ha"); i >= 0 {
+				rest = rest[:i]
+			}
+			rest = strings.ReplaceAll(rest, " and ", ", ")
+			for _, n := range strings.Split(rest, ", ") {
+				cur.inherits = append(cur.inherits, strings.TrimPrefix(strings.TrimSpace(n), "a "))
+			}
+			continue
+		}
+		if p, ok := strings.CutPrefix(line, "- "); ok {
+			cur.perms = append(cur.perms, p)
+		}
+	}
+	if err := sc.Err(); err != nil {
+		t.Fatalf("read docs/roles.md: %v", err)
+	}
+	if len(out) == 0 {
+		t.Fatal("parsed no roles in docs/roles.md; the parser is blind, not the doc empty")
+	}
+	return out
+}
+
+func sorted(s []string) []string {
+	c := append([]string(nil), s...)
+	sort.Strings(c)
+	return c
+}
+
+// TestRolesMatchDocs proves docs/roles.md describes the role graph in
+// roles.go: the same roles, each with the same own permissions and the same
+// parents.
+func TestRolesMatchDocs(t *testing.T) {
+	doc := parseRolesDoc(t)
+	roles := Roles()
+	if len(doc) != len(roles) {
+		t.Errorf("docs/roles.md has %d roles, roles.go has %d", len(doc), len(roles))
+	}
+	for _, r := range roles {
+		d, ok := doc[r.Name]
+		if !ok {
+			t.Errorf("role %q is not in docs/roles.md", r.Name)
+			continue
+		}
+		if got, want := sorted(r.Permissions), sorted(d.perms); !reflect.DeepEqual(got, want) {
+			t.Errorf("%s own permissions:\n roles.go %v\n docs     %v", r.Name, got, want)
+		}
+		if got, want := sorted(r.Inherits), sorted(d.inherits); !reflect.DeepEqual(got, want) {
+			t.Errorf("%s inherits %v in roles.go, docs say %v", r.Name, got, want)
+		}
+	}
+}
+
+// TestRolesAreEnforceable proves the graph is one core accepts: it is
+// well formed (it has an Admin, no cycles, no empty role) and every
+// permission names a resource and verb that Resources registers. The server
+// checks the same at startup; this fails the build first.
+func TestRolesAreEnforceable(t *testing.T) {
+	if err := db.ValidateRoles(Roles()); err != nil {
+		t.Fatal(err)
+	}
+	rs := server.NewResources()
+	for _, def := range Resources() {
+		if err := rs.Register(def); err != nil {
+			t.Fatalf("register %s: %v", def.Name, err)
+		}
+	}
+	for _, r := range Roles() {
+		for _, p := range r.Permissions {
+			if err := rs.CheckString(p); err != nil {
+				t.Errorf("role %s: %v", r.Name, err)
+			}
+		}
+	}
+}

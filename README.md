@@ -1,0 +1,121 @@
+# hello-web
+
+The hello-web API: a thin program on go-web-base core (an HTTP server
+with Google sign-in, Casbin RBAC, structured logging and permission-gated
+routes), plus a SvelteKit PWA in `ui/`.
+
+Hello Web was generated from the
+[go-web-base](https://github.com/andrewmyhre/go-web-base) Copier template.
+`.copier-answers.yml` records the answers, and `uvx copier update` merges in
+later template changes. `llms.txt` lists every doc; the example role graph is
+`docs/roles.md`.
+
+## What is here
+
+The server, sign-in, sessions, RBAC, logging, Redis and Postgres access and
+configuration are not in this repository: they come from
+[go-web-base core](https://github.com/andrewmyhre/go-web-base/tree/main/core)
+(`github.com/andrewmyhre/go-web-base/core`, pinned in `go.mod`). Its README
+is the reference for route permissions, the sign-in flow, sessions,
+authorization and the `app.Options` contract. This repository holds only what
+is specific to Hello Web:
+
+- `cmd/hello-web/main.go`: a call to `app.Main` with this project's
+  name, version, env prefix (`HELLO_WEB`) and cookie prefix
+  (`hello_web`), its role graph, the `Routes` hook where its own routes go,
+  and the `Features` list for optional modules. Every route goes through
+  `server.Register` with a declared permission; an unguarded route stops the
+  server at startup.
+- `roles.go`: the example role graph (`Roles()`) and the resources its
+  permissions name (`Resources()`). Core ships neither; main passes them to
+  core.
+- The `example` feature (`github.com/andrewmyhre/go-web-base/features/example`),
+  listed in `Features` in `main.go` and granted to `Contributor`. It serves
+  `GET /example/hello` and reads `HELLO_WEB_EXAMPLE_GREETING` (see
+  `deploy/dev/api.yaml`). Its grant is not in `docs/roles.md`. Turn it off
+  with `uvx copier@9.19.1 update -d feature_example=false`.
+- `docs/roles.md`: the same graph in prose. `TestRolesMatchDocs`
+  (`roles_test.go`) fails until it agrees with `roles.go`.
+- `docs/logging.md` and `deploy/grafana/`: the logging queries and the Grafana
+  dashboard for this project's namespace.
+- `deploy/`: the image Dockerfiles and the dev environment manifests.
+- `ui/`: the SvelteKit PWA.
+- `.woodpecker.yml`: tests, lint, UI checks, image builds and `deploy-dev`.
+
+## Configuration
+
+Settings are read from `HELLO_WEB_`-prefixed environment variables and
+the `serve` flags. The Google client secret and Redis password are
+environment only, so they never appear in process arguments.
+
+| setting | flag | environment |
+|---|---|---|
+| address | `--addr` | `HELLO_WEB_ADDR` |
+| log level | `--log-level` | `HELLO_WEB_LOG_LEVEL` |
+| Google client id | `--google-client-id` | `HELLO_WEB_GOOGLE_CLIENT_ID` |
+| Google client secret | none | `HELLO_WEB_GOOGLE_CLIENT_SECRET` |
+| Google redirect URI | `--google-redirect-uri` | `HELLO_WEB_GOOGLE_REDIRECT_URI` |
+| Redis address | `--redis-addr` | `HELLO_WEB_REDIS_ADDR` |
+| Redis password | none | `HELLO_WEB_REDIS_PASSWORD` |
+| database DSN | none | `HELLO_WEB_DATABASE_DSN` |
+| admin sub | none | `HELLO_WEB_ADMIN_SUB` |
+
+Sign-in is off while the client id is empty, and needs Redis and Postgres when
+it is on. With the database DSN set, `serve` applies the migrations at
+startup, then binds the admin sub (a Google account ID) to Admin.
+
+## Running
+
+```sh
+go run ./cmd/hello-web serve
+go run ./cmd/hello-web serve --addr :9090 --log-level debug
+HELLO_WEB_ADDR=:9090 HELLO_WEB_LOG_LEVEL=debug go run ./cmd/hello-web serve
+```
+
+A flag given on the command line wins over the environment, which wins
+over the default. Log levels are `debug`, `info`, `warn` and `error`.
+
+## Development
+
+```sh
+go test ./...
+go vet ./...
+gofmt -l .
+```
+
+## Container image
+
+`deploy/api.Dockerfile` builds a static binary into a distroless,
+non-root image that runs `hello-web serve` on port 8080:
+
+```sh
+docker build -f deploy/api.Dockerfile -t hello-web-api .
+docker run --rm -p 8080:8080 hello-web-api
+```
+
+On every push to `main`, after `test` and `lint` pass, the `build-api`
+step in `.woodpecker.yml` builds it on the cluster's BuildKit daemon and
+pushes:
+
+```
+192.168.0.10:30500/hello-web-api:<full 40-character commit sha>
+```
+
+There is no moving tag such as `main` or `latest`: a deployment names
+the commit it runs. Pull requests run `test`, `lint` and `ui` only and
+never push an image; `pipeline_test.go` pins that filter.
+
+## UI
+
+`ui/` is a SvelteKit PWA served on the same origin as the API, with its
+own image (`deploy/ui.Dockerfile`, pushed by `build-ui` as
+`192.168.0.10:30500/hello-web-ui:<sha>`). Its typed API client is generated
+from `ui/openapi.json`, which is the output of:
+
+```sh
+go run ./cmd/hello-web openapi > ui/openapi.json
+```
+
+`TestCommittedOpenAPISpecIsCurrent` (compared with `app.OpenAPISpec`) fails when that file is stale, and the
+`ui` pipeline step fails when the generated client is. See
+[ui/README.md](ui/README.md).

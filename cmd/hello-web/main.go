@@ -1,0 +1,59 @@
+// Command hello-web is the Hello Web API. Everything it does comes from
+// go-web-base core (github.com/andrewmyhre/go-web-base/core): this file only
+// supplies the values that are specific to this project.
+package main
+
+import (
+	"github.com/andrewmyhre/go-web-base/core/app"
+	"github.com/andrewmyhre/go-web-base/features/example"
+
+	project "github.com/andrewmyhre/hello-web"
+)
+
+// options are this project's values. The openapi test uses the same ones, so
+// the committed ui/openapi.json is what this binary prints.
+func options() app.Options {
+	return app.Options{
+		Name:         "hello-web",
+		Version:      "0.1.0",
+		EnvPrefix:    "HELLO_WEB",
+		CookiePrefix: "hello_web",
+		// The role graph and the resources its permissions name live in
+		// roles.go at the project root. Core ships none of its own.
+		Roles:     project.Roles(),
+		Resources: project.Resources(),
+		// Features are optional modules, each its own Go module. To add one,
+		// go get it, import it, and list it here, naming the role it grants to
+		// where it asks for one. Each feature's migrations run in this order,
+		// after core's and before this project's own. Then regenerate
+		// ui/openapi.json (pnpm run generate in ui/), since a feature's routes
+		// are in it. The Copier questions feature_<name> render this glue.
+		//
+		// The example feature adds GET /example/hello for "Contributor" (and so
+		// for every role that inherits it).
+		Features: []app.Feature{example.New("Contributor")},
+		// Migrations holds this project's own goose migrations (*.sql in an
+		// embed.FS, passed through fs.Sub). They run last, in their own version
+		// table. Leave it unset until the project has a table of its own.
+		//
+		// Migrations: migrationsFS,
+		//
+		// Routes registers this project's own routes, after core's built-ins
+		// and the features'. Every route goes through server.Register (import
+		// "github.com/andrewmyhre/go-web-base/core/server") with a declared
+		// permission, or the server refuses to start. Uncomment and fill in:
+		//
+		// Routes: func(r *server.Router, d app.Deps) error {
+		// 	return server.Register(r, server.Operation{
+		// 		OperationID: "get-example",
+		// 		Method:      http.MethodGet,
+		// 		Path:        "/example",
+		// 		Permission:  server.Authenticated,
+		// 	}, exampleHandler)
+		// },
+	}
+}
+
+func main() {
+	app.Main(options())
+}

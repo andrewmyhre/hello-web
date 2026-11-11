@@ -1,0 +1,28 @@
+package main
+
+import (
+	"bytes"
+	"os"
+	"testing"
+
+	"github.com/andrewmyhre/go-web-base/core/app"
+)
+
+// TestCommittedOpenAPISpecIsCurrent is the first half of the UI client drift
+// check. ui/openapi.json must be byte-for-byte what `hello-web openapi`
+// prints for the code in this commit; the UI's ui pipeline step then
+// regenerates src/lib/api/openapi.d.ts from that file and fails on any
+// difference. Together they keep the typed client equal to the API.
+func TestCommittedOpenAPISpecIsCurrent(t *testing.T) {
+	want, err := app.OpenAPISpec(options())
+	if err != nil {
+		t.Fatalf("OpenAPISpec: %v", err)
+	}
+	got, err := os.ReadFile("../../ui/openapi.json")
+	if err != nil {
+		t.Fatalf("read ui/openapi.json: %v", err)
+	}
+	if !bytes.Equal(got, want) {
+		t.Fatalf("ui/openapi.json is stale. Regenerate it and the client from ui/:\n\n  pnpm run generate\n\nwhich runs `go run ./cmd/hello-web openapi > ui/openapi.json` and openapi-typescript.")
+	}
+}

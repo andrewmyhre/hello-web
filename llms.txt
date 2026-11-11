@@ -1,0 +1,12 @@
+# hello-web
+
+> Hello Web: a Go API with Casbin RBAC and Google sign-in, plus a separate SvelteKit PWA UI. Generated from the go-web-base Copier template (answers in `.copier-answers.yml`).
+
+## Docs
+
+- [README.md](README.md): The API - what is project-specific versus in go-web-base core, configuration, running, the image and the UI client generation.
+- [docs/roles.md](docs/roles.md): The example role graph (six roles, project and global scope). `TestRolesMatchDocs` compares it with `Roles()` in `roles.go`, which main passes to core.
+- [docs/logging.md](docs/logging.md): The logging fields per scope (the contract is core's), LogQL for Loki, and the Grafana dashboard in `deploy/grafana`.
+- [deploy/dev/README.md](deploy/dev/README.md): The dev environment at hello-web-dev.immutablesoftware.dev (namespace hello-web-dev) - manifests, one-time setup, the deploy-dev rollout and the deployer ServiceAccount tradeoff.
+- [ui/README.md](ui/README.md): The SvelteKit PWA - same-origin routing, how the API client is generated from ui/openapi.json and the two drift checks, the service worker rule, local development and the image.
+- [features/example](https://github.com/andrewmyhre/go-web-base/tree/main/features/example): The example feature module installed in `cmd/hello-web/main.go`: `GET /example/hello`, the `ExampleGreetings` resource granted to `Contributor`, and `HELLO_WEB_EXAMPLE_GREETING`.

@@ -1,0 +1,8 @@
+# The hello-web dev environment, served at
+# hello-web-dev.immutablesoftware.dev. Applied once by hand; see README.md.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hello-web-dev
+  labels:
+    app.kubernetes.io/part-of: hello-web

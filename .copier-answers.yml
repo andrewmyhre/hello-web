@@ -1,0 +1,13 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v0.2.0
+_src_path: https://github.com/andrewmyhre/go-web-base.git
+admin_sub: ''
+dev_host: hello-web-dev.immutablesoftware.dev
+dev_namespace: hello-web-dev
+env_prefix: HELLO_WEB
+feature_example: true
+github_repo: andrewmyhre/hello-web
+go_module: github.com/andrewmyhre/hello-web
+project_name: Hello Web
+project_slug: hello-web
+registry: 192.168.0.10:30500

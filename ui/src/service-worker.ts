@@ -1,0 +1,53 @@
+/// <reference no-default-lib="true"/>
+/// <reference lib="esnext" />
+/// <reference lib="webworker" />
+// The PWA service worker. SvelteKit builds and registers it. The decision
+// for each request is in @andrewmyhre/web-base-ui/sw-policy, which never lets /auth/* or /me
+// near the cache; this file only carries the decisions out.
+import { build, files, version } from '$service-worker';
+import { strategyFor } from '@andrewmyhre/web-base-ui/sw-policy';
+
+const sw = self as unknown as ServiceWorkerGlobalScope;
+const CACHE = `hello_web-ui-${version}`;
+const SHELL = '/';
+// API paths this project adds to the package's base set (/auth, /me, /health,
+// /openapi.json). Keep in step with deploy/dev/ingress.yaml.
+const EXTRA_API_PREFIXES: string[] = [];
+// The built app, the files in static/, and the shell (index.html, which the
+// static server returns for /). Nothing else is ever written to the cache.
+const PRECACHE = [SHELL, ...build, ...files];
+const precached = new Set(PRECACHE);
+
+sw.addEventListener('install', (event) => {
+	event.waitUntil(
+		caches
+			.open(CACHE)
+			.then((cache) => cache.addAll(PRECACHE))
+			.then(() => sw.skipWaiting())
+	);
+});
+
+sw.addEventListener('activate', (event) => {
+	event.waitUntil(
+		caches
+			.keys()
+			.then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+			.then(() => sw.clients.claim())
+	);
+});
+
+sw.addEventListener('fetch', (event) => {
+	const req = event.request;
+	switch (strategyFor(req, sw.location.origin, precached, EXTRA_API_PREFIXES)) {
+		case 'bypass':
+			return;
+		case 'cache-first':
+			event.respondWith(caches.match(req).then((hit) => hit ?? fetch(req)));
+			return;
+		case 'shell':
+			event.respondWith(
+				fetch(req).catch(async () => (await caches.match(SHELL)) ?? Response.error())
+			);
+			return;
+	}
+});

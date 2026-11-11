@@ -1,0 +1,17 @@
+# Sealed 2026-11-11 with kubeseal (controller kube-system/sealed-secrets-controller)
+# from the Google OAuth Web client JSON; holds client-id and client-secret.
+# Unseal verified once applied: see deploy/dev/README.md step 2.
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: hello-web-google-oauth
+  namespace: hello-web-dev
+spec:
+  encryptedData:
+    client-id: AgAotis9ltzJmoJYuz5N2PJrVpqdaO5UmKo4ZW1N7mxDsjYaVFP+XuocR6mzGXDpxrx62plTQAk4J2uDvmHrWM/u07qOfaM84QRwSgfRBpD1Y3jlUhevme1NgOAP2XzMGCOVKXgPSSqb+5QTb+bOzlBHao9lCw64QVbWuQYXcqzPVREnAVSurK8WimdRH1c7j0cCrc7TeWxbpbbhDioZwUD5FkGvlDhYQ/QLMx6l87RaIc6alFvEv/C5SefgD0hq8iUUQdOrLOfIYMHI0d84LPOZL104+yaU0QR8UpEPKsnw5NjfOn247Fzuoc+lX6w9/wTwK1aRZanzAOPK2tzNMsdUJZCm/EavnXwI5c+L4EsPaPLkQJMszxHwY1cFPcWxZ2NAhspfpW3d90jYU1gJWdiMCTrML8la6sDbrGqy+W5ExK0N5AzVl7B7CzdSUCF8YexOaPjBrG6TWnFUkQyY/uoB9Z75PZ+2G/XIeoG5ZTZI9+59V2RjW2r3PD2VKpd2crITI/SSLQpwwD4DPACDz3EzVmcMteSP7W+o1TCXyD5pJ6MOusWKYa8y0gVdpHmhmpfARfDvD06AE37f077HK9hdFcF/yWm4wUI48pbHtU3KNfMsbfUYRjeY/SOKh7yM85fDQV3p3XMn/1joSUDzKOzuSUrCoVA2YBeUstY3dSTCh5dBnVZ0G0/sGOdtoOfSPDtiKC1ZO5rEWg3gB5uNxMmPwY2zrHx07dPMbFz8mMPaIT29BQ6APpwq9Cies8BBrY1CrLoQ3g2HGYyfgRvzkIzTfzZpG7SRx4s=
+    client-secret: AgBsY79mkDohLAT+nKYn/nrvdTnajTUyP7Fmgrlo87Z0CtKQJl0K+vaW6YRTZKv9jLF9L2dzKJWCPrQ5c1DTxZyTwDwZJpspHnVRzhVriaYPqSdSmPgooIkAt5attVCLN3SoEcNcTSMQvvJt5y37z3M31hoInEZXpiUgqzetC5/H4m/ORGWm+ILrohfh0NQ1GyOmvSyiPYEBOcUPLblC6WIpcLho6yJNzLFErCf0zUwp8Y3nLd5NCACwRVhqAv7SahPCi9CsdjYH7XHKmAnyzUk94GMnHHJS9ySPsyU9cYA208bb0NTM6F9EL0K64TdQ5vxA4oi69C87xUmaD+H5OyGz7687q+V8/B1NUS1pL66CPTXK/u1FMr/2fgsfcLIvpur4GC8+iEO9onoF/2XnkosAFyQbGZEfU2MtCaq3r6jVfAF0oRWqJzyXlMHoOLNViI1qYJS19ORQOaKm1JUq88XQw/X1+xpdB8m6LZrlbcqRZntswjxs4yEiEVLGJlqlhyrLDqxrkRiIaH1XI2NdEM+k/pnCzr2Yhv3D/CgCa2BCxJWRrzP26qiug6cfLISiiDNa8YyQDAfYfUN3gjKmX7+LjJH5a9/+l/DMdKqeqACRIZYJPLH/CCCStC2v4wVFXHA+bqiDCpaH9KAzaOXaMtC2AfXdxqpuLpo11z/QxNGWVMke9dC9cVs2jt658B9RcPvBhJKdjh+xZtxBW9jzmVI881vcmVlYFTLCYR5vjblYy8yJUw==
+  template:
+    metadata:
+      name: hello-web-google-oauth
+      namespace: hello-web-dev

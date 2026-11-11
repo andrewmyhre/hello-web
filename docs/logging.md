@@ -1,0 +1,86 @@
+# Logging
+
+Every log line `hello-web` emits follows one schema, so Loki can filter to
+exactly one provider, agent, session, content kind, queue, request or RBAC
+decision. The schema, the typed helpers that emit it and the redaction rules
+are core's, in the `logging` package of
+`github.com/andrewmyhre/go-web-base/core` (see its README and godoc); this
+file holds what is specific to this project: its queries and its dashboard.
+
+- Logs go to stderr as zap JSON. The cluster's Fluent Bit ships them to Loki
+  and parses the JSON fields (`Merge_Log On`), so no shipping configuration is
+  needed.
+- Every line carries the low-cardinality `scope` (`api`, `rbac`, `queue` or
+  `agent`) and the `service` (`hello-web`, the `Name` in
+  `cmd/hello-web/main.go`).
+- Field values are JSON fields, never Loki labels: session and agent ids are
+  high-cardinality and must stay filterable as line fields.
+
+The fields per scope, for writing queries:
+
+| `scope` | fields |
+| -- | -- |
+| `api` | `request_id`, `method`, `path`, `route`, `permission`, `status`, `user_sub`, `client_ip`, `duration_ms` |
+| `rbac` | `subject`, `domain`, `object`, `action`, `decision` (`allow` or `deny`), `request_id` |
+| `queue` | `queue`, `job_id`, `attempt`, `outcome` |
+| `agent` | `provider`, `agent_id`, `session_id`, `kind` (`thought`, `tool_use`, `tool_result`, `message`, `prompt`, `question`), `content` |
+
+An `api` line and the `rbac` lines of the same request share a `request_id`,
+which is also returned in the `X-Request-Id` response header.
+
+## LogQL
+
+Every query selects the API's streams, parses the JSON line and then filters
+on the scope's fields. Fluent Bit names its stream labels after the
+Kubernetes metadata, so the namespace label is `kubernetes_namespace_name`
+(not `namespace`), and pod labels appear with `.`, `/` and `-` turned into
+`_`. `app_kubernetes_io_part_of="hello-web"` keeps out the Postgres and Redis
+pods that share the namespace. The examples use dev (`hello-web-dev`):
+
+```logql
+# api: failing requests, and requests that matched no route
+{kubernetes_namespace_name="hello-web-dev", app_kubernetes_io_part_of="hello-web"} | json | scope="api" | status="500"
+{kubernetes_namespace_name="hello-web-dev", app_kubernetes_io_part_of="hello-web"} | json | scope="api" | status="404"
+
+# one request end to end: its api line and its rbac lines (no scope filter)
+{kubernetes_namespace_name="hello-web-dev", app_kubernetes_io_part_of="hello-web"} | json | request_id="0123456789abcdef"
+
+# rbac: who was refused, on what
+{kubernetes_namespace_name="hello-web-dev", app_kubernetes_io_part_of="hello-web"} | json | scope="rbac" | decision="deny"
+{kubernetes_namespace_name="hello-web-dev", app_kubernetes_io_part_of="hello-web"} | json | scope="rbac" | decision="deny" | object="42"
+
+# queue: failing work, by queue
+{kubernetes_namespace_name="hello-web-dev", app_kubernetes_io_part_of="hello-web"} | json | scope="queue" | outcome="failed"
+{kubernetes_namespace_name="hello-web-dev", app_kubernetes_io_part_of="hello-web"} | json | scope="queue" | queue="workflow-runs" | attempt="3"
+
+# agent: one provider's tool results, one session's prompts, a word in content
+{kubernetes_namespace_name="hello-web-dev", app_kubernetes_io_part_of="hello-web"} | json | scope="agent" | provider="openai" | kind="tool_result"
+{kubernetes_namespace_name="hello-web-dev", app_kubernetes_io_part_of="hello-web"} | json | scope="agent" | session_id="session-1" | kind="prompt"
+{kubernetes_namespace_name="hello-web-dev", app_kubernetes_io_part_of="hello-web"} | json | scope="agent" | content=~"(?i).*migration.*"
+```
+
+## Dashboard
+
+`deploy/grafana/hello-web-logs.json` is a Grafana dashboard over these
+queries: line volume by scope, API requests by status, every matching line,
+and one panel each for API 5xx and 404, RBAC denies, failed queue jobs and
+agent lines. Its dropdowns are `namespace` plus the six contract fields
+`scope`, `provider`, `agent_id`, `session_id`, `kind` and `request_id`, and
+every panel applies all six, so setting `request_id` follows one request
+through its api and rbac lines.
+
+- `namespace` lists real values, because it is a Loki label. The six fields
+  are JSON fields, and Grafana's Loki variables can only list label values,
+  so their dropdowns offer the contract's fixed values (`scope`, `kind`) or
+  only `All`, and take a typed value (for an id, paste it from a line or
+  from the `X-Request-Id` header).
+- The Grafana sidecar in `monitoring` loads any ConfigMap labelled
+  `grafana_dashboard: "1"`. `deploy/grafana/kustomization.yaml` generates
+  that ConfigMap from the JSON file, so the JSON is the only copy:
+
+  ```sh
+  kubectl apply -k deploy/grafana
+  ```
+
+- `deploy/grafana/dashboard_test.go` pins the six variables to the
+  `logging` package's (core's) scopes and kinds, and checks every panel applies them.
