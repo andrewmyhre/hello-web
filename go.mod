@@ -3,8 +3,8 @@ module github.com/andrewmyhre/hello-web
 go 1.26.0
 
 require (
-	github.com/andrewmyhre/go-web-base/core v0.2.0
-	github.com/andrewmyhre/go-web-base/features/example v0.2.0
+	github.com/andrewmyhre/go-web-base/core v0.2.1
+	github.com/andrewmyhre/go-web-base/features/example v0.2.1
 	go.yaml.in/yaml/v3 v3.0.5
 )
 

@@ -1,7 +1,7 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: v0.2.0
+_commit: v0.2.1
 _src_path: https://github.com/andrewmyhre/go-web-base.git
-admin_sub: ''
+admin_sub: '115787957813394515032'
 dev_host: hello-web-dev.immutablesoftware.dev
 dev_namespace: hello-web-dev
 env_prefix: HELLO_WEB

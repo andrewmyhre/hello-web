@@ -25,4 +25,6 @@ spec:
           - { path: /me, pathType: Prefix, backend: { service: { name: hello-web-api, port: { name: http } } } }
           - { path: /health, pathType: Exact, backend: { service: { name: hello-web-api, port: { name: http } } } }
           - { path: /openapi.json, pathType: Exact, backend: { service: { name: hello-web-api, port: { name: http } } } }
+          # The example feature's routes (GET /example/hello).
+          - { path: /example, pathType: Prefix, backend: { service: { name: hello-web-api, port: { name: http } } } }
           - { path: /, pathType: Prefix, backend: { service: { name: hello-web-ui, port: { name: http } } } }

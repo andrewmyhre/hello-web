@@ -12,7 +12,7 @@ const CACHE = `hello_web-ui-${version}`;
 const SHELL = '/';
 // API paths this project adds to the package's base set (/auth, /me, /health,
 // /openapi.json). Keep in step with deploy/dev/ingress.yaml.
-const EXTRA_API_PREFIXES: string[] = [];
+const EXTRA_API_PREFIXES: string[] = ['/example'];
 // The built app, the files in static/, and the shell (index.html, which the
 // static server returns for /). Nothing else is ever written to the cache.
 const PRECACHE = [SHELL, ...build, ...files];

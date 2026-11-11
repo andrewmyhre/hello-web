@@ -51,7 +51,7 @@ spec:
             # The global Admin, bootstrapped at startup (core db package): the
             # owner's Google account ID (the OIDC sub), never an email. Empty
             # skips the bootstrap, and then nobody can sign in.
-            - { name: HELLO_WEB_ADMIN_SUB, value: "" }
+            - { name: HELLO_WEB_ADMIN_SUB, value: "115787957813394515032" }
             - { name: HELLO_WEB_GOOGLE_REDIRECT_URI, value: "https://hello-web-dev.immutablesoftware.dev/auth/google/callback" }
             # The example feature's greeting (GET /example/hello). Unset uses its
             # default, "Hello from the example feature".
